@@ -1,10 +1,13 @@
+import time
+
+import numpy
 import requests
 import requests
 from PIL import Image
 import numpy as np
 from io import BytesIO
 import cv2
-class FrigateCam:
+class FrigateCamera:
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -19,72 +22,37 @@ class FrigateCam:
         self.server = frigate_server
         self.name = camera_name
 
-
         if params is None:
-            self.params = {'fps': 1, 'h': 1080}
+            self.params = {'fps': 1, 'h': 300}
         else:
             self.params = params
 
 # ----------------------------------------------------------------------------------------------------------------------
-    def stream(self):
 
-        api_url = f'{self.server}/api/{self.name}'
-        try:
-            # Send an HTTP GET request to the API endpoint
-            response = requests.get(api_url, params=self.params, stream=True)
+    def read(self):
 
-            # Process the MJPEG stream
-            if response.status_code == 200:
-                currentC = None
-                for chunk in response.iter_content(chunk_size=1024):
-                    if chunk != currentC:
-                        print(str(chunk))
-                        currentC = chunk
 
-            else:
-                print(f'Error: {response.status_code} - {response.text}')
+        api_url = f'{self.server}/api/{self.name}/latest.jpg'
 
-        except Exception as e:
-            print(f'Error: {e}')
-
-# ----------------------------------------------------------------------------------------------------------------------
-
-    def stream2(self):
-        api_url = f'{self.server}/api/{self.name}'
         try:
             # API Request
-            response = requests.get(api_url, params=self.params, stream=True)
+            response = requests.get(api_url, params=self.params)
 
-            # Stores the current frame, so as not to output it repeatedly
-            current_frame = b''
+            if response.status_code == 200:
 
-            for chunk in response.iter_content(chunk_size=1024):
-                current_frame += chunk
+                # Converts to jpeg
+                img_data = BytesIO(response.content)
+                img = Image.open(img_data)
+                np_img = numpy.array(img)
 
-                # Checks if the chunk is in fact a frame
-                if b'--frame' in current_frame:
+                return True, np_img
 
-                    # Find the start and end markers
-                    start_marker = current_frame.find(b'\xff\xd8')
-                    end_marker = current_frame.find(b'\xff\xd9')
-
-
-                    if start_marker != -1 and end_marker != -1:
-                        # This is where the frame needs to be decoded
-
-
-                        # Extract the JPEG frame
-                        frame_data = current_frame[start_marker:end_marker + 2]
-
-                        # Decode the JPEG frame
-                        frame = cv2.imdecode(np.frombuffer(frame_data, dtype=np.uint8), cv2.IMREAD_COLOR)
-
-                        # Display the frame
-                        cv2.imshow('Frame', frame)
-                        cv2.waitKey(1)
-
-                    # Reset the current frame for the next frame
-                    current_frame = b''
+            else:
+                return False, None
 
         except Exception as e:
             print(f'Error: {e}')
+
+
+
+    def retrieveClip(self, clipTime: int) -> str:
