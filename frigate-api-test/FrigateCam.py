@@ -1,6 +1,10 @@
+import datetime
+import os
+import sqlite3
 import time
 
 import numpy
+import pytz
 import requests
 import requests
 from PIL import Image
@@ -53,6 +57,47 @@ class FrigateCamera:
         except Exception as e:
             print(f'Error: {e}')
 
+#-----------------------------------------------------------------------------------------------------------------------
+
+    def recording(self, target_time: float):
+
+        # Connects to the database
+        conn = sqlite3.connect("/home/jacob/frigate-v3/frigate.db")
+
+        # Query Database
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM recordings")
+        rows = cur.fetchall()
 
 
-    def retrieveClip(self, clipTime: int) -> str:
+        print("RECORDINGS:")
+        for row in rows:
+            print(row)
+
+
+        print("\nTARGET TIME:")
+        print(target_time)
+        print(datetime.datetime.utcfromtimestamp(target_time))
+
+
+        for row in rows:
+
+            # If the clip contains the target_time
+            if -9 <= (row[3] - target_time) <= 0:
+
+                print("\nPATH TO THE RECORDING WHICH STORES THE TARGET TIME:")
+                print(row[2])
+                print("\n\n")
+
+                # Fix recording path
+                filename = row[2].replace('/media/frigate/', '/home/jacob/frigate-v3/')
+
+                # Open MP4 in VLC
+                os.system("cvlc " + filename)
+                break
+
+
+        
+
+
+
