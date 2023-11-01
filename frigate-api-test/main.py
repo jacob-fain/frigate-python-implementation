@@ -29,6 +29,11 @@ def main1():
 def main2():
 
     c1 = FrigateCamera("http://10.0.0.165:5000", "cam1")
-    c1.recording(1698338489)
+
+    success, path = c1.recording(1698338489)
+
+    if success:
+        # Plays the
+        os.system("cvlc " + path)
 
 main2()

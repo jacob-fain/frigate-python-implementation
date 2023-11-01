@@ -82,19 +82,24 @@ class FrigateCamera:
 
         for row in rows:
 
+            recording_start_time = row[3]
+
             # If the clip contains the target_time
-            if -9 <= (row[3] - target_time) <= 0:
+            if -9 <= (recording_start_time - target_time) <= 0:
 
                 print("\nPATH TO THE RECORDING WHICH STORES THE TARGET TIME:")
                 print(row[2])
                 print("\n\n")
 
                 # Fix recording path
-                filename = row[2].replace('/media/frigate/', '/home/jacob/frigate-v3/')
+                path_to_recording = row[2].replace('/media/frigate/', '/home/jacob/frigate-v3/')
 
-                # Open MP4 in VLC
-                os.system("cvlc " + filename)
-                break
+                # Returns path
+                return True, path_to_recording
+
+        # If a recording containing the targeted time could not be found
+        return False, None
+
 
 
         
