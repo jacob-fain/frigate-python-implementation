@@ -23,8 +23,10 @@ class FrigateCamera:
         :param params: camera specifications stored in a dictionary. set my default as {'fps': 10, 'h': 1080}
         """
 
+
         self.server = frigate_server
         self.name = camera_name
+        self.db_path = "/home/jacob/frigate-v3/frigate.db"
 
         if params is None:
             self.params = {'fps': 1, 'h': 300}
@@ -59,21 +61,24 @@ class FrigateCamera:
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-    def recording(self, target_time: float):
+    def retrieveRecording(self, target_time: float) -> tuple:
+        """
+        Queries the frigate database with and identifies the path to the recording which contains a specific time.
+        :param target_time: The targeted time in UNIX timestamp format. EX: 1698338489
+        :return: Returns a tuple containing the results. Either (True, path_to_recording) or (False, None)
+        """
 
         # Connects to the database
-        conn = sqlite3.connect("/home/jacob/frigate-v3/frigate.db")
+        conn = sqlite3.connect(self.db_path)
 
         # Query Database
         cur = conn.cursor()
         cur.execute("SELECT * FROM recordings")
         rows = cur.fetchall()
 
-
-        print("RECORDINGS:")
+        print("\nRECORDINGS:")
         for row in rows:
             print(row)
-
 
         print("\nTARGET TIME:")
         print(target_time)
