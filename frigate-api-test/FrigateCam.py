@@ -1,8 +1,8 @@
 import datetime
+import json
 import os
 import sqlite3
 import time
-
 import numpy
 import pytz
 import requests
@@ -11,11 +11,13 @@ from PIL import Image
 import numpy as np
 from io import BytesIO
 import cv2
+
+
 class FrigateCamera:
 
 # ----------------------------------------------------------------------------------------------------------------------
 
-    def __init__(self, frigate_server: str, camera_name: str, params:dict = None):
+    def __init__(self, frigate_server: str, frigate_db_path: str, camera_name: str, params:dict = None):
 
         """
         :param frigate_server: the url of the frigate server. EX: http://10.0.0.165:5000
@@ -26,16 +28,20 @@ class FrigateCamera:
 
         self.server = frigate_server
         self.name = camera_name
-        self.db_path = "/home/jacob/frigate-v3/frigate.db"
+        self.db_path = frigate_db_path
 
         if params is None:
-            self.params = {'fps': 1, 'h': 300}
+            self.params = {'fps': 30, 'h': 700}
         else:
             self.params = params
 
 # ----------------------------------------------------------------------------------------------------------------------
 
-    def read(self):
+    def read(self) -> tuple:
+        """
+        Queries the Frigate API and retrieves the camera's most recent frame
+        :return: A tuple containing the results. Either (True, NP_Array_Image) or (False, None)
+        """
 
 
         api_url = f'{self.server}/api/{self.name}/latest.jpg'
@@ -65,7 +71,7 @@ class FrigateCamera:
         """
         Queries the frigate database with and identifies the path to the recording which contains a specific time.
         :param target_time: The targeted time in UNIX timestamp format. EX: 1698338489
-        :return: Returns a tuple containing the results. Either (True, path_to_recording) or (False, None)
+        :return: A tuple containing the results. Either (True, path_to_recording) or (False, None)
         """
 
         # Connects to the database
@@ -105,9 +111,29 @@ class FrigateCamera:
         # If a recording containing the targeted time could not be found
         return False, None
 
+# ----------------------------------------------------------------------------------------------------------------------
+
+    def stats(self):
+        """
+        Retrieves stats regarding Frigate and it's cameras
+        :return: A JSON containing the stats
+        """
 
 
-        
+        api_url = f'{self.server}/api/stats'
+
+        try:
+
+            # API Request
+            response = requests.get(api_url, params=self.params)
+
+            if response.status_code == 200:
+                return response.content
+
+        except Exception as e:
+            print(f'Error: {e}')
+
+# ----------------------------------------------------------------------------------------------------------------------
 
 
 
