@@ -25,7 +25,6 @@ class FrigateCamera:
         :param params: camera specifications stored in a dictionary. set my default as {'fps': 10, 'h': 1080}
         """
 
-
         self.server = frigate_server
         self.name = camera_name
         self.db_path = frigate_db_path
@@ -42,7 +41,6 @@ class FrigateCamera:
         Queries the Frigate API and retrieves the camera's most recent frame
         :return: A tuple containing the results. Either (True, NP_Array_Image) or (False, None)
         """
-
 
         api_url = f'{self.server}/api/{self.name}/latest.jpg'
 
@@ -81,6 +79,54 @@ class FrigateCamera:
         cur = conn.cursor()
         cur.execute("SELECT * FROM recordings")
         rows = cur.fetchall()
+
+
+        print("\nRECORDINGS:")
+        for row in rows:
+            print(row)
+
+        print("\nTARGET TIME:")
+        print(target_time)
+        print(datetime.datetime.utcfromtimestamp(target_time))
+
+
+        for row in rows:
+
+            recording_start_time = row[3]
+
+            # If the clip contains the target_time
+            if -9 <= (recording_start_time - target_time) <= 0:
+
+                print("\nPATH TO THE RECORDING WHICH STORES THE TARGET TIME:")
+                print(row[2])
+                print("\n\n")
+
+                # Fix recording path
+                path_to_recording = row[2].replace('/media/frigate/', '/home/jacob/frigate-v3/')
+
+                # Returns path
+                return True, path_to_recording
+
+        # If a recording containing the targeted time could not be found
+        return False, None
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+    def retrieveRecordingContinued(self, target_time: float) -> tuple:
+        """
+        Queries the frigate database with and identifies the path to the recording which contains a specific time.
+        :param target_time: The targeted time in UNIX timestamp format. EX: 1698338489
+        :return: A tuple containing the results. Either (True, path_to_recording) or (False, None)
+        """
+
+        # Connects to the database
+        conn = sqlite3.connect(self.db_path)
+
+        # Query Database
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM recordings")
+        rows = cur.fetchall()
+
 
         print("\nRECORDINGS:")
         for row in rows:

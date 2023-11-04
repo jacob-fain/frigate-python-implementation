@@ -43,6 +43,7 @@ def testRetrieveRecording():
         os.system("cvlc " + path)
 
 
+
 def testStats():
     c1 = FrigateCamera("http://10.0.0.165:5000", "/home/jacob/frigate-v3/frigate.db", "cam1")
     c1.stats()
@@ -51,4 +52,4 @@ def testStats():
 
 #testRead()
 #testRetrieveRecording()
-testStats()
+#testStats()
