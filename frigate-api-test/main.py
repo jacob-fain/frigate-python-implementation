@@ -46,38 +46,49 @@ def testRetrieveRecording():
                        "cam1")
 
     timestamp = 1699195704
-    while True:
-        success, path = c1.retrieveRecording(timestamp)
-        timestamp += 10
+    frameNum = 0
+    clipNum = 0
+    start_time = time.time()
 
+    while True:
+
+        # retrieves the video clip
+        success, path = c1.retrieveRecording(timestamp)
         if success:
+
+            timestamp += 10
+            clipNum += 1
 
             cap = cv2.VideoCapture(path)
 
-            finished = False
+            # Loops through each frame of the video
             while True:
+
                 ret, frame = cap.read()
                 if not ret:
                     break
 
-                # Display the frame in a cv2 window
-                cv2.imshow("Display", frame)
-                cv2.waitKey(30)
-                # Break the loop if the user presses 'q'
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
+                # Update Text
+                frameNum += 1
+                elapsed_time = round(time.time() - start_time, 1)
+                cv2.putText(frame, f"Clip: {clipNum}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                cv2.putText(frame, f"Frame: {frameNum}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+                cv2.putText(frame, f"Time: {elapsed_time}", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+                try:
+                    cv2.putText(frame, f"FPS: {round(frameNum / elapsed_time)}", (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 1, (100, 0, 255), 2)
+                except: pass
 
-            # Release the video capture and close the cv2 window
+
+                # Display the frame
+                cv2.imshow("Display", frame)
+
+                # Adjusts the framerate / playback speed.
+                cv2.waitKey(30)
 
             cap.release()
-
-
-
-        # Plays the recording in vlc
-        # os.system("cvlc " + path)
-
-
-
+        # Stops when reaching the end of the recordings
+        else:
+            break
 
 #-----------------------------------------------------------------------------------------------------------------------
 
