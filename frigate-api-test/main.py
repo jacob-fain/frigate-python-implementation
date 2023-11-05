@@ -4,10 +4,14 @@ import time
 
 from FrigateCam import *
 
+#-----------------------------------------------------------------------------------------------------------------------
+
 def testRead():
 
     # Initializes camera object
-    c1 = FrigateCamera("http://10.0.0.165:5000", "/home/jacob/frigate-v3/frigate.db", "cam1")
+    c1 = FrigateCamera("http://192.168.0.108:5000",
+                       "/home/jacob/Ubihere/Frigate/",
+                       "cam1")
 
     # Creates OpenCV window for displaying the frames
     cv2.namedWindow("Display", cv2.WINDOW_AUTOSIZE)
@@ -30,26 +34,30 @@ def testRead():
             cv2.waitKey(20)
             prev_frame = frame
 
+#-----------------------------------------------------------------------------------------------------------------------
 
 def testRetrieveRecording():
 
+    c1 = FrigateCamera("http://192.168.0.108:5000",
+                       "/home/jacob/Ubihere/Frigate/",
+                       "cam1")
 
-    c1 = FrigateCamera("http://10.0.0.165:5000", "/home/jacob/frigate-v3/frigate.db", "cam1")
-
-    success, path = c1.retrieveRecording(1698338489)
+    success, path = c1.retrieveRecording(1699195704)
 
     if success:
         # Plays the recording in vlc
         os.system("cvlc " + path)
 
-
+#-----------------------------------------------------------------------------------------------------------------------
 
 def testStats():
-    c1 = FrigateCamera("http://10.0.0.165:5000", "/home/jacob/frigate-v3/frigate.db", "cam1")
+    c1 = FrigateCamera("http://10.0.0.165:5000",
+                       "/home/jacob/Ubihere/Frigate/",
+                       "cam1")
     c1.stats()
 
 
 
 #testRead()
-#testRetrieveRecording()
+testRetrieveRecording()
 #testStats()

@@ -68,12 +68,12 @@ class FrigateCamera:
     def retrieveRecording(self, target_time: float) -> tuple:
         """
         Queries the frigate database with and identifies the path to the recording which contains a specific time.
-        :param target_time: The targeted time in UNIX timestamp format. EX: 1698338489
+        :param target_time: The targeted time in UNIX timestamp format. EX: 169frigate.db8338489
         :return: A tuple containing the results. Either (True, path_to_recording) or (False, None)
         """
 
         # Connects to the database
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path + "frigate.db")
 
         # Query Database
         cur = conn.cursor()
@@ -102,7 +102,7 @@ class FrigateCamera:
                 print("\n\n")
 
                 # Fix recording path
-                path_to_recording = row[2].replace('/media/frigate/', '/home/jacob/frigate-v3/')
+                path_to_recording = self.db_path + row[2].replace('/media/frigate/', '')
 
                 # Returns path
                 return True, path_to_recording
