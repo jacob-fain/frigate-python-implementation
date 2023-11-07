@@ -1,6 +1,3 @@
-import PIL
-import numpy
-import time
 
 from FrigateCam import *
 
@@ -43,11 +40,10 @@ def testCreateVolume():
                        "/home/jacob/Ubihere/Frigate/",
                        "cam1")
 
-
-    fps = 3
-    volume = c1.createVolume(1699300816,20, fps)
-
-
+    fps = 1
+    start = time.time()
+    volume = c1.createVolume(1699300816,10, fps)
+    print(time.time() - start)
 
     # Displays the volume for testing
     for frame in volume:

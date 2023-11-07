@@ -1,14 +1,9 @@
-import datetime
-import json
-import os
+
 import sqlite3
 import time
 import numpy
-import pytz
-import requests
 import requests
 from PIL import Image
-import numpy as np
 from io import BytesIO
 import cv2
 
