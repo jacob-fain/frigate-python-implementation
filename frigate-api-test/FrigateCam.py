@@ -69,7 +69,7 @@ class FrigateCamera:
         """
         Queries the frigate database with and identifies the path to the recording which contains a specific time.
         :param target_time: The targeted time in UNIX timestamp format. EX: 169frigate.db8338489
-        :return: A tuple containing the results. Either (True, path_to_recording) or (False, None)
+        :return: A tuple containing the results. Either (True, cap) or (False, None). Cap is a CV2 video capture object
         """
 
         # Connects to the database
@@ -80,105 +80,190 @@ class FrigateCamera:
         cur.execute("SELECT * FROM recordings")
         rows = cur.fetchall()
 
+        # print("\nRECORDINGS:")
+        # for row in rows:
+        #     print(row)
 
-        print("\nRECORDINGS:")
+        # Loop through each tuple in the recordings relation
         for row in rows:
-            print(row)
-
-        print("\nTARGET TIME:")
-        print(target_time)
-        print(datetime.datetime.utcfromtimestamp(target_time))
-
-
-        for row in rows:
-
             recording_start_time = row[3]
 
             # If the clip contains the target_time
             if -9 <= (recording_start_time - target_time) <= 0:
 
-                print("\nPATH TO THE RECORDING WHICH STORES THE TARGET TIME:")
-                print(row[2])
-                print("\n\n")
+                # print("\nPATH TO THE RECORDING WHICH STORES THE TARGET TIME:")
+                # print(row[2])
+                # print("\n\n")
 
                 # Fix recording path
                 path_to_recording = self.db_path + row[2].replace('/media/frigate/', '')
 
-                # Returns path
-                return True, path_to_recording
+                # Creates a CV2 video capture object and returns it
+                cap = cv2.VideoCapture(path_to_recording)
+                return True, cap
 
         # If a recording containing the targeted time could not be found
         return False, None
 
 # ----------------------------------------------------------------------------------------------------------------------
 
-    def retrieveRecordingContinued(self, target_time: float) -> tuple:
-        """
-        Queries the frigate database with and identifies the path to the recording which contains a specific time.
-        :param target_time: The targeted time in UNIX timestamp format. EX: 1698338489
-        :return: A tuple containing the results. Either (True, path_to_recording) or (False, None)
-        """
+    def playRecording(self, target_time: float, duration: float = None) -> None:
 
-        # Connects to the database
-        conn = sqlite3.connect(self.db_path)
-
-        # Query Database
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM recordings")
-        rows = cur.fetchall()
+        # Accumulators
+        frameNum = 0
+        clipNum = 0
+        start_time = time.time()
 
 
-        print("\nRECORDINGS:")
-        for row in rows:
-            print(row)
+        while True:
 
-        print("\nTARGET TIME:")
-        print(target_time)
-        print(datetime.datetime.utcfromtimestamp(target_time))
+            # retrieves the video clip
+            success, cap = self.retrieveRecording(target_time)
+            if success:
+
+                target_time += 10
+                clipNum += 1
+
+                # Loops through each frame of the video
+                while True:
+
+                    ret, frame = cap.read()
+                    if not ret:
+                        break
 
 
-        for row in rows:
+                    frameNum += 1
+                    elapsed_time = round(time.time() - start_time, 1)
 
-            recording_start_time = row[3]
+                    # Closes program if video duration is reached
+                    if duration is not None and elapsed_time >= duration:
+                        exit()
 
-            # If the clip contains the target_time
-            if -9 <= (recording_start_time - target_time) <= 0:
+                    # Appends text to each frame
+                    cv2.putText(frame, f"Clip: {clipNum}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    cv2.putText(frame, f"Frame: {frameNum}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+                    cv2.putText(frame, f"Time: {elapsed_time}", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+                    if elapsed_time != 0.0:
+                        cv2.putText(frame, f"FPS: {round(frameNum / elapsed_time)}", (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 1,(100, 0, 255), 2)
 
-                print("\nPATH TO THE RECORDING WHICH STORES THE TARGET TIME:")
-                print(row[2])
-                print("\n\n")
+                    # Display the frame
+                    cv2.imshow(f"{self.name} recording", frame)
 
-                # Fix recording path
-                path_to_recording = row[2].replace('/media/frigate/', '/home/jacob/frigate-v3/')
+                    # Adjusts the framerate / playback speed.
+                    cv2.waitKey(30)
 
-                # Returns path
-                return True, path_to_recording
+                cap.release()
 
-        # If a recording containing the targeted time could not be found
-        return False, None
+            # Stops when reaching the end of the recordings
+            else:
+                break
 
 # ----------------------------------------------------------------------------------------------------------------------
 
-    def stats(self):
-        """
-        Retrieves stats regarding Frigate and it's cameras
-        :return: A JSON containing the stats
-        """
+    def createVolume(self, target_time, duration, target_fps) :
+
+        success, cap = self.retrieveRecording(target_time)
+        video_fps = round(cap.get(cv2.CAP_PROP_FPS))
+        if target_fps > video_fps:
+            target_fps = video_fps
+
+        frame_count = round(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        video_duration = round(frame_count / video_fps)
+
+        print(f"The clip's default FPS is: {video_fps}")
+        print(f"The total number of frames in the clip: {frame_count}")
+        print(f"The duration of the clip: {video_duration} seconds\n")
+
+        print(f"Targeted FPS: {target_fps}")
+        print(f"Targeted total frame count: {target_fps * duration}")
+        print(f"Targeted Duration: {duration} seconds")
 
 
-        api_url = f'{self.server}/api/stats'
+        #volume = np.array([])
+        volume = []
 
-        try:
+        while True:
 
-            # API Request
-            response = requests.get(api_url, params=self.params)
+            # retrieves the video clip
+            success, cap = self.retrieveRecording(target_time)
 
-            if response.status_code == 200:
-                return response.content
+            if success:
+                target_time += 10
 
-        except Exception as e:
-            print(f'Error: {e}')
+                index_in = -1
+                index_out = -1
 
+                while True:
+
+                    success = cap.grab()
+                    if not success: break
+                    index_in += 1
+
+                    # Skips frames to acheive target FPS
+                    out_due = int(index_in / video_fps * target_fps)
+                    if out_due > index_out:
+                        success, frame = cap.retrieve()
+                        if not success: break
+                        index_out += 1
+
+                        # Append the frame to the new volume
+                        volume.append(frame)
+
+                        # Once the total number of frames is reached, returns the volume
+                        if len(volume)>= target_fps * duration:
+                            return volume
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            #     target_time += 10
+            #
+            #     # Loops through each frame of the video
+            #     while True:
+            #
+            #         ret, frame = cap.read()
+            #         if not ret:
+            #             break
+            #
+            #         volume = np.append(volume, frame)
+            #         volumeL.append(frame)
+            #         print(volume)
+            #         print(volumeL)
+            #
+            #
+            #     cap.release()
+            #
+            # # Stops when reaching the end of the recordings
+            # else:
+            #     break
+
+
+
+
+
+
+
+    # return arrray of images as numpy array.
 # ----------------------------------------------------------------------------------------------------------------------
 
 
