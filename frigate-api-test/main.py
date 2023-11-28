@@ -1,12 +1,12 @@
 
-from FrigateCam import *
+from frigate_camera import *
 
 #-----------------------------------------------------------------------------------------------------------------------
 
 def testRead():
 
     # Initializes camera object
-    c1 = FrigateCamera("http://192.168.0.108:5000",
+    c1 = Frigate_Camera("http://10.0.0.112:5000",
                        "/home/jacob/Ubihere/Frigate/",
                        "cam1")
 
@@ -36,7 +36,7 @@ def testRead():
 def testCreateVolume():
 
 
-    c1 = FrigateCamera("http://192.168.0.108:5000",
+    c1 = Frigate_Camera("http://192.168.0.108:5000",
                        "/home/jacob/Ubihere/Frigate/",
                        "cam1")
 
@@ -55,12 +55,12 @@ def testCreateVolume():
 
 def testPlayRecording():
 
-    c1 = FrigateCamera("http://192.168.0.108:5000",
+    c1 = FrigateC_amera("http://192.168.0.108:5000",
                        "/home/jacob/Ubihere/Frigate/",
                        "cam1")
 
     c1.playRecording(1699300816, 15)
 
-# testRead()
+#testRead()
 # testPlayRecording()
 testCreateVolume()

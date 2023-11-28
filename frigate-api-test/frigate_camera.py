@@ -8,7 +8,10 @@ from io import BytesIO
 import cv2
 
 
-class FrigateCamera:
+class Frigate_Camera:
+    """
+    An object
+    """
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -41,7 +44,7 @@ class FrigateCamera:
 
         try:
             # API Request
-            response = requests.get(api_url, params=self.params)
+            response = requests.get(api_url)
 
             if response.status_code == 200:
 
@@ -60,10 +63,10 @@ class FrigateCamera:
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-    def retrieveRecording(self, target_time: float) -> tuple:
+    def retrieve_recording(self, target_time: float) -> tuple:
         """
         Queries the frigate database with and identifies the path to the recording which contains a specific time.
-        :param target_time: The targeted time in UNIX timestamp format. EX: 169frigate.db8338489
+        :param target_time: The targeted time in UNIX timestamp format. EX: 1698338489
         :return: A tuple containing the results. Either (True, cap) or (False, None). Cap is a CV2 video capture object
         """
 
@@ -80,15 +83,11 @@ class FrigateCamera:
         #     print(row)
 
         # Loop through each tuple in the recordings relation
-        for row in rows:
+        for row in reversed(rows):
             recording_start_time = row[3]
 
             # If the clip contains the target_time
             if -9 <= (recording_start_time - target_time) <= 0:
-
-                # print("\nPATH TO THE RECORDING WHICH STORES THE TARGET TIME:")
-                # print(row[2])
-                # print("\n\n")
 
                 # Fix recording path
                 path_to_recording = self.db_path + row[2].replace('/media/frigate/', '')
@@ -102,22 +101,27 @@ class FrigateCamera:
 
 # ----------------------------------------------------------------------------------------------------------------------
 
-    def playRecording(self, target_time: float, duration: float = None) -> None:
+    def play_recording(self, target_time: float, duration: float = None):
+        """
+        Plays a recording from the camera in an OpenCV window
+        :param target_time: The targeted time in UNIX timestamp format. EX: 1698338489
+        :param duration: The amount of seconds to play
+        """
 
         # Accumulators
-        frameNum = 0
-        clipNum = 0
+        frame_num = 0
+        clip_num = 0
         start_time = time.time()
 
 
         while True:
 
             # retrieves the video clip
-            success, cap = self.retrieveRecording(target_time)
+            success, cap = self.retrieve_recording(target_time)
             if success:
 
                 target_time += 10
-                clipNum += 1
+                clip_num += 1
 
                 # Loops through each frame of the video
                 while True:
@@ -126,8 +130,7 @@ class FrigateCamera:
                     if not ret:
                         break
 
-
-                    frameNum += 1
+                    frame_num += 1
                     elapsed_time = round(time.time() - start_time, 1)
 
                     # Closes program if video duration is reached
@@ -135,11 +138,11 @@ class FrigateCamera:
                         exit()
 
                     # Appends text to each frame
-                    cv2.putText(frame, f"Clip: {clipNum}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                    cv2.putText(frame, f"Frame: {frameNum}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+                    cv2.putText(frame, f"Clip: {clip_num}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    cv2.putText(frame, f"Frame: {frame_num}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
                     cv2.putText(frame, f"Time: {elapsed_time}", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
                     if elapsed_time != 0.0:
-                        cv2.putText(frame, f"FPS: {round(frameNum / elapsed_time)}", (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 1,(100, 0, 255), 2)
+                        cv2.putText(frame, f"FPS: {round(frame_num / elapsed_time)}", (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 1,(100, 0, 255), 2)
 
                     # Display the frame
                     cv2.imshow(f"{self.name} recording", frame)
@@ -155,110 +158,57 @@ class FrigateCamera:
 
 # ----------------------------------------------------------------------------------------------------------------------
 
-    def createVolume(self, target_time, duration, target_fps) :
+    def create_volume(self, target_time: float, duration: float, target_fps: float = None):
+        """
+        Creates a volume of frames from a camera recording. Allows for custom duration and framerate
+        :param target_time: The targeted time in UNIX timestamp format. EX: 1698338489
+        :param duration: The amount of seconds of the recording to capture
+        :param target_fps: The FPS to convert the volume to. Defaults as the recordings FPS
+        :return: A list of frames. The frames are stored as numpy arrays.
+        """
 
-        success, cap = self.retrieveRecording(target_time)
-        video_fps = round(cap.get(cv2.CAP_PROP_FPS))
-        if target_fps > video_fps:
-            target_fps = video_fps
+        try:
+            # Initial call which is used to provide information about the stream
+            success, cap = self.retrieve_recording(round(target_time))
+            video_fps = round(cap.get(cv2.CAP_PROP_FPS))
 
-        frame_count = round(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        video_duration = round(frame_count / video_fps)
+            if target_fps > video_fps or target_fps is None:
+                target_fps = video_fps
 
-        print(f"The clip's default FPS is: {video_fps}")
-        print(f"The total number of frames in the clip: {frame_count}")
-        print(f"The duration of the clip: {video_duration} seconds\n")
+            volume = []
+            while True:
 
-        print(f"Targeted FPS: {target_fps}")
-        print(f"Targeted total frame count: {target_fps * duration}")
-        print(f"Targeted Duration: {duration} seconds")
+                # retrieves the video clip
+                success, cap = self.retrieve_recording(target_time)
 
+                if success:
+                    target_time += 10
 
-        #volume = np.array([])
-        volume = []
+                    index_in = -1
+                    index_out = -1
 
-        while True:
+                    while True:
 
-            # retrieves the video clip
-            success, cap = self.retrieveRecording(target_time)
-
-            if success:
-                target_time += 10
-
-                index_in = -1
-                index_out = -1
-
-                while True:
-
-                    success = cap.grab()
-                    if not success: break
-                    index_in += 1
-
-                    # Skips frames to acheive target FPS
-                    out_due = int(index_in / video_fps * target_fps)
-                    if out_due > index_out:
-                        success, frame = cap.retrieve()
+                        success = cap.grab()
                         if not success: break
-                        index_out += 1
+                        index_in += 1
 
-                        # Append the frame to the new volume
-                        volume.append(frame)
+                        # Skips frames to achieve target FPS
+                        out_due = int(index_in / video_fps * target_fps)
+                        if out_due > index_out:
+                            success, frame = cap.retrieve()
+                            if not success: break
+                            index_out += 1
 
-                        # Once the total number of frames is reached, returns the volume
-                        if len(volume)>= target_fps * duration:
-                            return volume
+                            # Append the frame to the new volume
+                            volume.append(frame)
 
+                            # Once the total number of frames is reached, returns the volume
+                            if len(volume)>= target_fps * duration:
+                                return True, volume
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            #     target_time += 10
-            #
-            #     # Loops through each frame of the video
-            #     while True:
-            #
-            #         ret, frame = cap.read()
-            #         if not ret:
-            #             break
-            #
-            #         volume = np.append(volume, frame)
-            #         volumeL.append(frame)
-            #         print(volume)
-            #         print(volumeL)
-            #
-            #
-            #     cap.release()
-            #
-            # # Stops when reaching the end of the recordings
-            # else:
-            #     break
-
-
-
-
-
-
-
-    # return arrray of images as numpy array.
+        except:
+            return False, None
 # ----------------------------------------------------------------------------------------------------------------------
 
 
