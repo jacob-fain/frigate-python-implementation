@@ -35,32 +35,61 @@ def testRead():
 
 def testCreateVolume():
 
-
-    c1 = Frigate_Camera("http://192.168.0.108:5000",
+    fps = 25
+    cam1 = Frigate_Camera("http://10.0.0.112:5000",
                        "/home/jacob/Ubihere/Frigate/",
                        "cam1")
 
-    fps = 1
-    start = time.time()
-    volume = c1.createVolume(1699300816,10, fps)
-    print(time.time() - start)
+    camera_list = [cam1]
+    camera_volume_list = []
 
-    # Displays the volume for testing
-    for frame in volume:
-        cv2.imshow('Display', frame)
-        cv2.waitKey(round(1000 / fps))
+    while True:
+
+        video_image_list = []
+        camera_n = -1
+
+        for camera in camera_list:
+            camera_n += 1
+
+            if camera_volume_list == [[]]: camera_volume_list = []
+            # If camera does not have a volume yet or its volume is empty, creates a new volume
+            if len(camera_volume_list) == camera_n or not camera_volume_list[camera_n]:
+
+                # Creates a 30 second long volume for each camera from 60 seconds ago at 1fps
+                success = False
+                while not success:
+                    success, volume = camera.create_volume(time.time() - 60, 10, fps)
+                    if success:
+                        camera_volume_list.append(volume)
+
+            # Assigns the most recent frame from the camera volume to video image then deletes the frame from the volume
+            video_image = camera_volume_list[camera_n][0]
+            del camera_volume_list[camera_n][0]
+
+            # Appends the image to video_image_list
+            video_image = cv2.resize(video_image, (640, 480))
+            #video_image = video_image.transpose((2, 0, 1))
+            # self.video_image = np.expand_dims(self.video_image, 0)
+            video_image_list.append(video_image)
+
+            # Displays the volume for testing
+            frame = video_image_list.pop(0)
+
+            cv2.imshow('Display', frame)
+            cv2.waitKey(round(1000 / fps))
+
 
 
 #-----------------------------------------------------------------------------------------------------------------------
 
 def testPlayRecording():
 
-    c1 = FrigateC_amera("http://192.168.0.108:5000",
+    c1 = Frigate_Camera("http://192.168.0.108:5000",
                        "/home/jacob/Ubihere/Frigate/",
                        "cam1")
 
-    c1.playRecording(1699300816, 15)
+    c1.play_recording(1701209244, 100)
 
 #testRead()
-# testPlayRecording()
-testCreateVolume()
+testPlayRecording()
+#testCreateVolume()

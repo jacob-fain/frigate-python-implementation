@@ -9,13 +9,11 @@ import cv2
 
 
 class Frigate_Camera:
-    """
-    An object
-    """
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 
-    def __init__(self, frigate_server: str, frigate_db_path: str, camera_name: str, params:dict = None):
+    def __init__(self, frigate_server: str, frigate_db_path: str, camera_name: str):
 
         """
         :param frigate_server: the url of the frigate server. EX: http://10.0.0.165:5000
@@ -27,22 +25,22 @@ class Frigate_Camera:
         self.name = camera_name
         self.db_path = frigate_db_path
 
-        if params is None:
-            self.params = {'fps': 30, 'h': 700}
-        else:
-            self.params = params
 
 # ----------------------------------------------------------------------------------------------------------------------
 
+
+
+
     def read(self) -> tuple:
         """
-        Queries the Frigate API and retrieves the camera's most recent frame
-        :return: A tuple containing the results. Either (True, NP_Array_Image) or (False, None)
+        Queries the Frigate API and retrieves the camera's most recent frame, converting it to a numpy array.
+        :return: A tuple containing the results. Either (True, np_array_image) or (False, None).
         """
 
         api_url = f'{self.server}/api/{self.name}/latest.jpg'
 
         try:
+
             # API Request
             response = requests.get(api_url)
 
@@ -52,14 +50,13 @@ class Frigate_Camera:
                 img_data = BytesIO(response.content)
                 img = Image.open(img_data)
                 np_img = numpy.array(img)
-
                 return True, np_img
 
-            else:
-                return False, None
+            else: return False, None
 
-        except Exception as e:
-            print(f'Error: {e}')
+        except requests.exceptions.RequestException as e:
+            print(f"Error during API request: {e}")
+            return False, None
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -78,11 +75,7 @@ class Frigate_Camera:
         cur.execute("SELECT * FROM recordings")
         rows = cur.fetchall()
 
-        # print("\nRECORDINGS:")
-        # for row in rows:
-        #     print(row)
-
-        # Loop through each tuple in the recordings relation
+        # Loop through each tuple starting with the most recent recording
         for row in reversed(rows):
             recording_start_time = row[3]
 
@@ -103,7 +96,7 @@ class Frigate_Camera:
 
     def play_recording(self, target_time: float, duration: float = None):
         """
-        Plays a recording from the camera in an OpenCV window
+        Plays a recording from the camera in an OpenCV window. Useful for debugging.
         :param target_time: The targeted time in UNIX timestamp format. EX: 1698338489
         :param duration: The amount of seconds to play
         """
@@ -112,7 +105,6 @@ class Frigate_Camera:
         frame_num = 0
         clip_num = 0
         start_time = time.time()
-
 
         while True:
 
@@ -148,7 +140,7 @@ class Frigate_Camera:
                     cv2.imshow(f"{self.name} recording", frame)
 
                     # Adjusts the framerate / playback speed.
-                    cv2.waitKey(30)
+                    cv2.waitKey(round(1000 / 1))
 
                 cap.release()
 
