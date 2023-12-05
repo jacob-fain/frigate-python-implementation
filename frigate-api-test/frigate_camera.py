@@ -55,14 +55,14 @@ class Frigate_Camera:
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-    def retrieve_recording(self, target_time: float) -> tuple:
+    def retrieve_recording(self, target_time: float, skip: int = 0) -> tuple:
         """
         Queries the frigate database with and identifies the path to the recording which contains a specific time.
 
         :param target_time: The targeted time in UNIX timestamp format. EX: 1698338489
+        :param skip: The number of recordings to skip after the one containing the target_time.
         :return: A tuple containing the results. Either (True, cap) or (False, None). Cap is a CV2 video capture object
         """
-
 
         # Connects to the database
         conn = sqlite3.connect(self.db_path + "frigate.db")
@@ -72,24 +72,31 @@ class Frigate_Camera:
         cur.execute("SELECT * FROM recordings")
         rows = cur.fetchall()
 
+        # Start from the end of the list
+        i = len(rows) - 1
+
         # Loop through each tuple starting with the most recent recording
-        for row in reversed(rows):
-            recording_start_time = row[3]
+        while i >= 0:
+            recording_start_time = rows[i][3]
 
             # If the clip contains the target_time
-            if -9 <= (recording_start_time - target_time) <= 0:
+            if recording_start_time <= target_time:
 
                 # Fix recording path
-                path_to_recording = self.db_path + row[2].replace('/media/frigate/', '')
+                x = i + skip
+                path_to_recording = self.db_path + rows[x][2].replace('/media/frigate/', '')
 
                 # Creates a CV2 video capture object and returns it
                 cap = cv2.VideoCapture(path_to_recording)
                 return True, cap
 
-        print(f"recording {target_time} could not be found")
+            i -= 1
+
+        # Check if the target_time was not found
+        print(f"Recording {target_time} could not be found")
         return False, None
 
-# ----------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------------------------------
 
     def play_recording(self, target_time: float, duration: float = None):
         """
@@ -169,14 +176,15 @@ class Frigate_Camera:
 
             volume = []
 
+            skip = -1
             while True:
+                skip += 1
 
                 # Retrieves the video clip
-                success, cap = self.retrieve_recording(target_time)
+                success, cap = self.retrieve_recording(target_time, skip)
 
                 if success:
 
-                    target_time += 10
                     frame_index_in = -1
                     frame_index_out = -1
 
