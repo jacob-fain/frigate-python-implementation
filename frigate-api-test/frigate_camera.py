@@ -10,7 +10,6 @@ import cv2
 
 class Frigate_Camera:
 
-
 # ----------------------------------------------------------------------------------------------------------------------
 
     def __init__(self, frigate_server: str, frigate_db_path: str, camera_name: str):
@@ -18,22 +17,18 @@ class Frigate_Camera:
         """
         :param frigate_server: the url of the frigate server. EX: http://10.0.0.165:5000
         :param camera_name: the name of the camera specified in the frigate config
-        :param params: camera specifications stored in a dictionary. set my default as {'fps': 10, 'h': 1080}
         """
 
         self.server = frigate_server
         self.name = camera_name
         self.db_path = frigate_db_path
 
-
 # ----------------------------------------------------------------------------------------------------------------------
-
-
-
 
     def read(self) -> tuple:
         """
         Queries the Frigate API and retrieves the camera's most recent frame, converting it to a numpy array.
+
         :return: A tuple containing the results. Either (True, np_array_image) or (False, None).
         """
 
@@ -63,9 +58,11 @@ class Frigate_Camera:
     def retrieve_recording(self, target_time: float) -> tuple:
         """
         Queries the frigate database with and identifies the path to the recording which contains a specific time.
+
         :param target_time: The targeted time in UNIX timestamp format. EX: 1698338489
         :return: A tuple containing the results. Either (True, cap) or (False, None). Cap is a CV2 video capture object
         """
+
 
         # Connects to the database
         conn = sqlite3.connect(self.db_path + "frigate.db")
@@ -89,7 +86,7 @@ class Frigate_Camera:
                 cap = cv2.VideoCapture(path_to_recording)
                 return True, cap
 
-        # If a recording containing the targeted time could not be found
+        print(f"recording {target_time} could not be found")
         return False, None
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -97,6 +94,7 @@ class Frigate_Camera:
     def play_recording(self, target_time: float, duration: float = None):
         """
         Plays a recording from the camera in an OpenCV window. Useful for debugging.
+
         :param target_time: The targeted time in UNIX timestamp format. EX: 1698338489
         :param duration: The amount of seconds to play
         """
@@ -140,7 +138,7 @@ class Frigate_Camera:
                     cv2.imshow(f"{self.name} recording", frame)
 
                     # Adjusts the framerate / playback speed.
-                    cv2.waitKey(round(1000 / 1))
+                    cv2.waitKey(round(1000 / 30))
 
                 cap.release()
 
@@ -153,6 +151,7 @@ class Frigate_Camera:
     def create_volume(self, target_time: float, duration: float, target_fps: float = None):
         """
         Creates a volume of frames from a camera recording. Allows for custom duration and framerate
+
         :param target_time: The targeted time in UNIX timestamp format. EX: 1698338489
         :param duration: The amount of seconds of the recording to capture
         :param target_fps: The FPS to convert the volume to. Defaults as the recordings FPS
@@ -160,37 +159,41 @@ class Frigate_Camera:
         """
 
         try:
-            # Initial call which is used to provide information about the stream
+            # Initial call to retrieve information about the stream
             success, cap = self.retrieve_recording(round(target_time))
             video_fps = round(cap.get(cv2.CAP_PROP_FPS))
 
+            # If target_fps is not provided or is greater than video_fps, set it to video_fps
             if target_fps > video_fps or target_fps is None:
                 target_fps = video_fps
 
             volume = []
+
             while True:
 
-                # retrieves the video clip
+                # Retrieves the video clip
                 success, cap = self.retrieve_recording(target_time)
 
                 if success:
-                    target_time += 10
 
-                    index_in = -1
-                    index_out = -1
+                    target_time += 10
+                    frame_index_in = -1
+                    frame_index_out = -1
 
                     while True:
 
                         success = cap.grab()
                         if not success: break
-                        index_in += 1
+
+                        frame_index_in += 1
 
                         # Skips frames to achieve target FPS
-                        out_due = int(index_in / video_fps * target_fps)
-                        if out_due > index_out:
+                        out_due = int(frame_index_in / video_fps * target_fps)
+                        if out_due > frame_index_out:
                             success, frame = cap.retrieve()
                             if not success: break
-                            index_out += 1
+
+                            frame_index_out += 1
 
                             # Append the frame to the new volume
                             volume.append(frame)
@@ -199,9 +202,19 @@ class Frigate_Camera:
                             if len(volume)>= target_fps * duration:
                                 return True, volume
 
-        except:
+        except Exception as e:
+
+            print(f"create_volume encountered an error: {e}")
             return False, None
+
 # ----------------------------------------------------------------------------------------------------------------------
 
+ # def _connect_to_database(self):
+ #        if not self.conn or not self.conn.open:
+ #            try:
+ #                self.conn = sqlite3.connect(self.db_path + "frigate.db")
+ #            except sqlite3.Error as e:
+ #                print(f"SQLite error during connection: {e}")
 
+# ----------------------------------------------------------------------------------------------------------------------
 
