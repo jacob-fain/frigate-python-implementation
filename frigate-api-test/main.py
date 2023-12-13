@@ -39,14 +39,14 @@ def testCreateVolume(timestamp, duration, fps):
 
 
     camera = Frigate_Camera("http://10.0.0.112:5000",
-                       "/home/jacob/Ubihere/Frigate/",
+                       "/home/jacob/Ubihere/frigate/",
                        "cam1")
 
     success = None
     volume = []
 
     while not success:
-        success, volume = camera.create_volume(timestamp, duration, fps)
+        success, volume, a = camera.create_volume(timestamp, duration, fps)
 
     for frame in volume:
 
@@ -59,7 +59,7 @@ def testCreateVolume(timestamp, duration, fps):
 def testPlayRecording(timestamp):
 
     c1 = Frigate_Camera("http://10.0.0.112:5000",
-                       "/home/jacob/Ubihere/Frigate/",
+                       "/home/jacob/Ubihere/frigate/",
                        "cam1")
 
     c1.play_recording(timestamp)
@@ -72,6 +72,6 @@ def testPlayRecording(timestamp):
 
 #testPlayRecording(1701366426)
 
-testCreateVolume(1701366428, 100, 20)
+testCreateVolume(1701816747, 3, 20)
 
 #testRetrieveRecording()
